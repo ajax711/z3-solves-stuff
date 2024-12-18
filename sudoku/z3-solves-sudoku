@@ -1,0 +1,66 @@
+from z3 import *
+
+def solve_sudoku(instance):
+    # Create a 9x9 grid of integer variables
+    X = [[Int(f"x_{i+1}_{j+1}") for j in range(9)] for i in range(9)]
+
+    # Constraints for cells: Each cell contains a digit between 1 and 9
+    cells_c = [And(1 <= X[i][j], X[i][j] <= 9) for i in range(9) for j in range(9)]
+
+    # Constraints for rows: Each row contains distinct digits
+    rows_c = [Distinct(X[i]) for i in range(9)]
+
+    # Constraints for columns: Each column contains distinct digits
+    cols_c = [Distinct([X[i][j] for i in range(9)]) for j in range(9)]
+
+    # Constraints for 3x3 subgrids: Each subgrid contains distinct digits
+    sq_c = [
+        Distinct(
+            [X[3 * i0 + i][3 * j0 + j] for i in range(3) for j in range(3)]
+        )
+        for i0 in range(3)
+        for j0 in range(3)
+    ]
+
+    # Combine all constraints
+    sudoku_c = cells_c + rows_c + cols_c + sq_c
+
+    # Constraints for pre-filled cells in the Sudoku puzzle
+    instance_c = [
+        If(instance[i][j] == 0, True, X[i][j] == instance[i][j])
+        for i in range(9)
+        for j in range(9)
+    ]
+
+    # Create the solver and add constraints
+    s = Solver()
+    s.add(sudoku_c + instance_c)
+
+    # Solve the Sudoku puzzle
+    if s.check() == sat:
+        m = s.model()
+        result = [[m.evaluate(X[i][j]).as_long() for j in range(9)] for i in range(9)]
+        return result
+    else:
+        return None
+
+
+def print_sudoku(grid):
+    for row in grid:
+        print(" ".join(str(num) for num in row))
+
+
+if __name__ == "__main__":
+    print("Enter the Sudoku puzzle row by row, with 0 for blank cells.")
+    sudoku = []
+    for i in range(9):
+        row = input(f"Enter row {i + 1} (9 numbers separated by spaces): ")
+        sudoku.append(list(map(int, row.split())))
+
+    print("\nSolving the Sudoku puzzle...\n")
+    solution = solve_sudoku(sudoku)
+    if solution:
+        print("Solved Sudoku:")
+        print_sudoku(solution)
+    else:
+        print("No solution found.")
